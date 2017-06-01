@@ -1,0 +1,4 @@
+About ready, just need to set vgg to return dict with proper names and try running
+
+    sess = tf.InteractiveSession()
+
