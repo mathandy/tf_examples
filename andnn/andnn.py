@@ -90,7 +90,7 @@ class AnDNN:
             fetches = [md['step_forward'],
                        md['update_summary'],
                        md['loss']]
-            _, summary, training_loss, validation_loss = \
+            _, summary, training_loss = \
                 self._sess.run(fetches, feed_dict=feed_dict)
             print('Step: {} | Loss: {} | Validation Loss: {}%'
                   ''.format(step, training_loss, None))
@@ -112,18 +112,27 @@ class AnDNN:
         file_writer = tf.summary.FileWriter(self.tensorboard_dir + run_id,
                                             self._sess.graph)
 
-        def batch(data_, batch_size_, epochs_):
-            for step in range(epochs_ * Y.shape[0]):
-                offset = (step * batch_size_) % (data_.shape[0]-batch_size_)
-                yield data_[offset:(offset + batch_size_), :]
+        # def batch(data_, batch_size_, epochs_):
+        #     for step in range(epochs_ * Y.shape[0]):
+        #         offset = (step * batch_size_) % (data_.shape[0]-batch_size_)
+        #         yield data_[offset:(offset + batch_size_), :]
+        #
+        # X_batch = batch(X, batch_size, epochs)
+        # Y_batch = batch(Y, batch_size, epochs)
 
-        X_batch = batch(X, batch_size, epochs)
-        Y_batch = batch(Y, batch_size, epochs)
+        def get_batch(data_, batch_size_, step_):
+            offset = (step_ * batch_size_) % (data_.shape[0]-batch_size_)
+            return data_[offset:(offset + batch_size_), :]
 
         # Training Step
         for step in range(epochs * Y.shape[0]):
                 # get batch ready for training step
-                feed_dict = {X: next(X_batch), Y: next(Y_batch)}
+                # feed_dict = {X: next(X_batch), Y: next(Y_batch)}
+
+                X_batch = get_batch(X, batch_size, step)
+                Y_batch = get_batch(Y, batch_size, step)
+                feed_dict = {self.model_dict['X']: X_batch,
+                             self.model_dict['Y']: Y_batch}
 
                 tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()

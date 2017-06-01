@@ -106,8 +106,6 @@ def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
         else:
             loss = loss_fcn(fc3, Y)
 
-
-
     # optimizer = tf.train.AdamOptimizer(LEARNING_RATE)
     # optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE)
 
@@ -116,8 +114,12 @@ def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
         tf.summary.scalar("loss", loss)
         update_W_and_b = optimizer.minimize(loss)
 
+    full_summary = tf.summary.merge_all()
+
     model_dict = {'activations': activations, 'parameters': parameters,
-                  'loss': loss}
+                  'loss': loss, 'X': X, 'Y': Y, 'step_forward': update_W_and_b,
+                  'update_summary': full_summary}
+
     return model_dict
 #MAYBE this should return graph instead
 
@@ -156,3 +158,5 @@ if __name__ == '__main__':
 
     from andnn.andnn import AnDNN
     dnn = AnDNN(vgg_dict, weights_file=None, session=None, tensorboard_dir='/tmp/tflogs')
+    dnn.fit(Xtrain, Ytrain, batch_size, valid=0.0, run_id='unnamed',
+            epochs=10, steps_per_save=500, steps_per_report=1, step_fcn=None)
