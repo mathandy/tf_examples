@@ -2,12 +2,11 @@ from __future__ import division, print_function, absolute_import
 import tensorflow as tf
 import numpy as np
 from scipy.misc import imresize
-import os
-
 
 
 class AnDNN:
-    def __init__(self, activations, parameters, weights_file=None, session=None,
+    def __init__(self, model_dict,
+                 weights_file=None, session=None,
                  tensorboard_dir='/tmp/tflogs'):
         """
         
@@ -15,7 +14,7 @@ class AnDNN:
         ----------
         model_dict: dict
             A dictionary of tf operators that are defined in the model.  The 
-            purpose being to give a simple accesible name space for the fetches
+            purpose being to give a simple accessible name space for the fetches
             and result_handling functions in AnDNN().fit()
         steps_per_report
         steps_per_save
@@ -63,8 +62,6 @@ class AnDNN:
     def create_checkpoint(self, step, checkpoint_name=None):
         self._saver.save(self._sess, checkpoint_name, global_step=step)
 
-    def _step_forward(self):
-
     def _default_step_fcn(self, feed_dict, step):
         steps_per_save = 500
         steps_per_report = 10
@@ -76,9 +73,8 @@ class AnDNN:
             #            md['training_loss'],
             #            md['validation_loss']]
             fetches = [md['step_forward'],
-                       md['update_summary'],
                        md['loss']]
-            _, summary, training_loss = \
+            _, training_loss = \
                 self._sess.run(fetches, feed_dict=feed_dict)
             self.create_checkpoint(step)
             print('Step: {} | Loss: {} | Validation Loss: {}%'
@@ -90,20 +86,14 @@ class AnDNN:
             #            md['training_loss'],
             #            md['validation_loss']]
             fetches = [md['step_forward'],
-                       md['update_summary'],
-                       md['loss']]
-            _, summary, training_loss = \
-                self._sess.run(fetches, feed_dict=feed_dict)
-            print('Step: {} | Loss: {} | Validation Loss: {}%'
-                  ''.format(step, training_loss, None))
+                       md['loss'],
+                       md['accuracy']]
+            _, loss, acc = self._sess.run(fetches, feed_dict=feed_dict)
+            print('Step: {} | Training Loss: {} | Training Accuracy: {}\%'
+                  ''.format(step, loss, acc))
         else:
-            fetches = [md['step_forward'],
-                       md['update_summary'],
-                       md['loss']]
-            _, summary, training_loss = \
-                self._sess.run(fetches, feed_dict=feed_dict)
-
-        return summary
+            fetches = [md['step_forward']]
+            _ = self._sess.run(fetches, feed_dict=feed_dict)
 
     def fit(self, X, Y, batch_size, valid=0.0, run_id='unnamed',
             epochs=10, steps_per_save=500, steps_per_report=1, step_fcn=None):
@@ -139,9 +129,10 @@ class AnDNN:
                 tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
 
-                summary = step_fcn(feed_dict, step)
+                step_fcn(feed_dict, step)
 
                 file_writer.add_run_metadata(run_metadata, 'step%03d' % step)
+                summary = tf.summary.merge_all()
                 if summary:
                     file_writer.add_summary(summary, step)
 
