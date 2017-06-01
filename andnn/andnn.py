@@ -7,7 +7,7 @@ import os
 
 
 class AnDNN:
-    def __init__(self, model_dict, weights_file=None, session=None,
+    def __init__(self, activations, parameters, weights_file=None, session=None,
                  tensorboard_dir='/tmp/tflogs'):
         """
         
@@ -44,7 +44,7 @@ class AnDNN:
             self.load_weights(weights_file)
 
         # construct saver object
-            self._saver = tf.train.Saver(self.parameters)
+        self._saver = tf.train.Saver(self.parameters)
 
     def load_weights(self, weight_file, np_load_kwargs={}):
         """Loads a dictionary of weights."""
@@ -62,6 +62,8 @@ class AnDNN:
 
     def create_checkpoint(self, step, checkpoint_name=None):
         self._saver.save(self._sess, checkpoint_name, global_step=step)
+
+    def _step_forward(self):
 
     def _default_step_fcn(self, feed_dict, step):
         steps_per_save = 500
