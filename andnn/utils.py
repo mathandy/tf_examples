@@ -202,3 +202,27 @@ def boxes2pixellabels(boxes, size, dtype=np.float32):
 
     sil = boxes2silhouette(boxes=boxes, size=size, dtype=dtype)
     return np.stack([sil, 1 - sil], axis=2)
+
+
+def step_plot(list_of_lists, ylabels=None):
+    import matplotlib.pyplot as plt
+    from pylab import subplot, subplots_adjust
+
+    m = len(list_of_lists[0])
+    assert all(len(v) == m for v in list_of_lists)
+    steps = range(m)
+
+    subplots_adjust(hspace=0.000)
+    number_of_subplots=3
+
+    for i, y in enumerate(list_of_lists):
+        ax = subplot(number_of_subplots, 1, i+1)
+        ax.plot(steps, y)
+        ax.set_xlabel('step')
+
+        if ylabels is None:
+            ax.set_ylabel('unnamed_%s'%i)
+        else:
+            ax.set_ylabel(ylabels[i])
+        # ax.set_title('Simple XY point plot')
+    plt.show()

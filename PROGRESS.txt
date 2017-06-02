@@ -1,4 +1,5 @@
-About ready, just need to set vgg to return dict with proper names and try running
+-looks like my fc_layer function isn't equivalent to tf.contrib.layers.fully_connected
+... why not?
+-why is loss in perceptron still going strictly up?
 
-    sess = tf.InteractiveSession()
-
+-why does tf.print statment affect model?
