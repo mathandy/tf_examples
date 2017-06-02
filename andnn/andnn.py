@@ -7,7 +7,7 @@ from scipy.misc import imresize
 class AnDNN:
     def __init__(self, model_dict,
                  weights_file=None, session=None,
-                 tensorboard_dir='/tmp/tflogs'):
+                 tensorboard_dir='/tmp/tflogs', debug=False):
         """
         
         Parameters
@@ -32,7 +32,10 @@ class AnDNN:
 
         # maybe initialize a session
         if session is None:
-            self._sess = tf.Session()
+            if debug:
+                self._sess = tf.InteractiveSession()
+            else:
+                self._sess = tf.Session()
         else:
             self._sess = session
 
@@ -62,9 +65,8 @@ class AnDNN:
     def create_checkpoint(self, step, checkpoint_name=None):
         self._saver.save(self._sess, checkpoint_name, global_step=step)
 
-    def _default_step_fcn(self, feed_dict, step):
-        steps_per_save = 500
-        steps_per_report = 10
+    def _default_step_fcn(self, feed_dict, step,
+                          steps_per_save, steps_per_report):
         md = self.model_dict
 
         if step > 0 and step % steps_per_save == 0:
@@ -80,23 +82,25 @@ class AnDNN:
             print('Step: {} | Loss: {} | Validation Loss: {}%'
                   ''.format(step, training_loss, None))
 
-        elif step > 0 and step % steps_per_report == 0:
+        elif step > 0 and (step < 10 or (step % steps_per_report) == 0):
             # fetches = [md['step_forward'],
             #            md['update_summary'],
             #            md['training_loss'],
             #            md['validation_loss']]
             fetches = [md['step_forward'],
                        md['loss'],
-                       md['accuracy']]
-            _, loss, acc = self._sess.run(fetches, feed_dict=feed_dict)
-            print('Step: {} | Training Loss: {} | Training Accuracy: {}\%'
+                       md['accuracy'],
+                       md['num_correct']]
+            _, loss, acc, nc = self._sess.run(fetches, feed_dict=feed_dict)
+            print('Step: {} | Training Loss: {} | Training Accuracy: {}'
                   ''.format(step, loss, acc))
+            print(nc)
         else:
             fetches = [md['step_forward']]
             _ = self._sess.run(fetches, feed_dict=feed_dict)
 
     def fit(self, X, Y, batch_size, valid=0.0, run_id='unnamed',
-            epochs=10, steps_per_save=500, steps_per_report=1, step_fcn=None):
+            epochs=10, steps_per_save=500, steps_per_report=50, step_fcn=None):
 
         if step_fcn is None:
             step_fcn = self._default_step_fcn
@@ -129,7 +133,7 @@ class AnDNN:
                 tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                 run_metadata = tf.RunMetadata()
 
-                step_fcn(feed_dict, step)
+                step_fcn(feed_dict, step, steps_per_save, steps_per_report)
 
                 file_writer.add_run_metadata(run_metadata, 'step%03d' % step)
                 summary = tf.summary.merge_all()

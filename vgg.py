@@ -118,7 +118,7 @@ def loss_fcn(logits, Y):
 #     return activations, parameters
 
 
-def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
+def vgg16(im_shape, num_classes, batch_size, optimizer,
           loss_fcn, dtype=tf.float32, loss_expects_logits=True):
     """
 
@@ -154,11 +154,12 @@ def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
                            shape=np.append(batch_size, num_classes),
                            name='Y_input')
 
-    # center the input images
-    with tf.name_scope('preprocess_centering'):
-        mean = tf.constant([123.68, 116.779, 103.939], dtype=tf.float32,
-                           shape=[1, 1, 1, 3], name='img_mean')
-        c_images = X - mean
+    # # center the input images
+    # with tf.name_scope('preprocess_centering'):
+    #     mean = tf.constant([123.68, 116.779, 103.939], dtype=tf.float32,
+    #                        shape=[1, 1, 1, 3], name='img_mean')
+    #     c_images = X - mean
+    c_images = X
 
     # images --> conv1_1 --> conv1_2 --> pool1
     conv1_1, weights1, biases1 = conv_layer(c_images, 3, 3, 64, 'conv1_1')
@@ -226,7 +227,16 @@ def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
         is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
         return 100.0 * tf.reduce_mean(tf.cast(is_correct, "float"))
 
+    def num_correct(predictions, labels):
+        is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+        return tf.reduce_sum(tf.cast(is_correct, "float"))
+
+    def num_correct(predictions, labels):
+        is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+        return tf.reduce_sum(tf.cast(is_correct, "float"))
+
     acc = accuracy(fc3, Y)
+    num_corr = num_correct(fc3, Y)
 
     # with tf.name_scope('training'):
     #     loss = tf.reduce_mean(loss)  #?maybe need to reduce again
@@ -237,7 +247,10 @@ def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
 
     model_dict = {'activations': activations, 'parameters': parameters,
                   'loss': loss, 'X': X, 'Y': Y,
-                  'step_forward': update_weights_op, 'accuracy': acc}
+                  'step_forward': update_weights_op,
+                  'accuracy': acc,
+                  'num_correct': num_corr
+                  }
 
     return model_dict
 
@@ -245,6 +258,12 @@ def vgg16(im_shape, num_classes, batch_size, for_training, optimizer,
 if __name__ == '__main__':
     from scipy.io import loadmat
     from andnn.iotools import split_data, k21hot
+    import sys
+
+    cl_args = sys.argv[1:]
+    debug = False
+    if 'debug' in cl_args:
+        debug = True
 
     usps_data = loadmat('usps/USPS.mat')
     X, Y = usps_data['fea'], usps_data['gnd']
@@ -261,13 +280,13 @@ if __name__ == '__main__':
     batch_size = 32
     optimizer = tf.train.AdamOptimizer(0.001)
 
-    vgg_dict = vgg16(im_shape, num_classes, batch_size, for_training=True,
+    vgg_dict = vgg16(im_shape, num_classes, batch_size,
                      optimizer=optimizer, loss_fcn=loss_fcn, dtype=tf.float32,
                      loss_expects_logits=True)
 
     from andnn.andnn import AnDNN
     dnn = AnDNN(vgg_dict, weights_file=None, session=None,
-                tensorboard_dir='/tmp/tflogs')
+                tensorboard_dir='/tmp/tflogs', debug=True)
 
     dnn.fit(Xtrain, Ytrain, batch_size, valid=0.0, run_id='unnamed',
-            epochs=10, steps_per_save=500, steps_per_report=1, step_fcn=None)
+            epochs=10, steps_per_save=500, steps_per_report=50, step_fcn=None)
