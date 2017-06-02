@@ -24,6 +24,16 @@ def k21hot(Y, k=None):
     return hot_labels
 
 
+def shuffle_together(list_of_arrays, permutation=None):
+    m = len(list_of_arrays[0])
+    assert all([len(x) == m for x in list_of_arrays[1:]])
+
+    if permutation is None:
+        permutation = list(range(m))
+        random.shuffle(permutation)
+    return [x[permutation] for x in list_of_arrays], permutation
+
+
 def split_data(X, Y, validpart=0, testpart=0, shuffle=False):
     """Split data into training, validation, and test sets.  
 
@@ -45,10 +55,7 @@ def split_data(X, Y, validpart=0, testpart=0, shuffle=False):
 
     # shuffle data
     if shuffle:
-        permutation = range(m)
-        random.shuffle(permutation)
-        X = X[permutation]
-        Y = Y[permutation]
+        (X, Y), permutation = shuffle_together((X, Y))
 
     if 0 <= validpart < 1 and 0 <= testpart < 1:
         m_valid = int(validpart * m)
