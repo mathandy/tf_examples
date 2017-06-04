@@ -1,5 +1,7 @@
--looks like my fc_layer function isn't equivalent to tf.contrib.layers.fully_connected
-... why not?
--why is loss in perceptron still going strictly up?
+todo:
+-implement validation
+-implement test/evaluation (i.e. a predict function)
 
--why does tf.print statment affect model?
+Questions/notes:
+why is fc_layer not equivalent to tf.contib.layers.fully_connected?  Or is it?
+

@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function
+import tensorflow as tf
 import os
 from PIL import Image, ImageDraw
 from simshow import simshow
@@ -226,3 +227,18 @@ def step_plot(list_of_lists, ylabels=None):
             ax.set_ylabel(ylabels[i])
         # ax.set_title('Simple XY point plot')
     plt.show()
+
+
+def accuracy(predictions, labels):
+    is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+    return 100.0 * tf.reduce_mean(tf.cast(is_correct, "float"))
+
+
+def num_correct(predictions, labels):
+    is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+    return tf.reduce_sum(tf.cast(is_correct, "float"))
+
+
+def num_incorrect(predictions, labels):
+    is_incorrect = tf.not_equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+    return tf.reduce_sum(tf.cast(is_incorrect, "float"))

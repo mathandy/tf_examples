@@ -358,7 +358,7 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
             X /= np.std(X, axis=0)
 
     if (testpart or validpart) and storage_directory:
-        with Timer('Splitting data into train/validate/test sets'):
+        with Timer('Splitting data into fit/validate/test sets'):
             X_train, Y_train, X_valid, Y_valid, X_test, Y_test = \
                 split_data(X, Y, validpart, testpart, shuffle=False)
 
