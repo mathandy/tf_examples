@@ -1,10 +1,32 @@
-Last time: implemented eval/transform/predict function
+Last time:
+----------
+-implemented validation (not tested yet)
+-restructured as class, AnDNN
+-implemented vgg (to same extent as fully_connected)
+
 
 todo:
--implement validation
--implement test/evaluation (i.e. a predict function)
--asynch batching
+-----
+-test fully connected validation
+-test vgg
+-implement checkpointing (this is maybe working in andnn_old.py)
+-implement loading of weights from npy file
+-implement fcn8/YOLO/others :)
+-asynchronous batching
+
 
 Questions/notes:
-why is fc_layer not equivalent to tf.contib.layers.fully_connected?  Or is it?
+----------------
+why is fc_layer not equivalent to tf.contrib.layers.fully_connected?  Or is it?
 
+
+Unrelated, but Remember (daily):
+--------------------------------
+-practice c++
+-do ML coursera
+-svgpathtools bug and group support
+
+
+Unrelated, but Remember (one-time):
+-----------------------------------
+-can i use git to automatically remove trailing whitespace when committing?
