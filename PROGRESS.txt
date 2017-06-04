@@ -1,6 +1,9 @@
+Last time: implemented eval/transform/predict function
+
 todo:
 -implement validation
 -implement test/evaluation (i.e. a predict function)
+-asynch batching
 
 Questions/notes:
 why is fc_layer not equivalent to tf.contib.layers.fully_connected?  Or is it?

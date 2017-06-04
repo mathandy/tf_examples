@@ -242,3 +242,15 @@ def num_correct(predictions, labels):
 def num_incorrect(predictions, labels):
     is_incorrect = tf.not_equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
     return tf.reduce_sum(tf.cast(is_incorrect, "float"))
+
+
+def batches(data, batch_size, include_remainder=True):
+    """Break a dataset, `data` into batches of size `batch_size`.
+
+    If `len(data) % batch_size > 0`, the remaining
+    examples will be included if `include_remainder` is true."""
+    num_batches = data.shape[0] // batch_size
+    if len(data) % batch_size and include_remainder:
+        num_batches += 1
+    return (data[k * batch_size: min((k + 1) * batch_size, len(data))]
+            for k in range(num_batches))

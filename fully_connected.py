@@ -1,10 +1,11 @@
 from __future__ import division, print_function, absolute_import
 import tensorflow as tf
+import numpy as np
 from scipy.io import loadmat
 from andnn.iotools import k21hot, shuffle_together
 from andnn.layers import fc_layer
 from tensorflow.contrib import layers
-from andnn.utils import step_plot, accuracy, num_correct, num_incorrect
+from andnn.utils import step_plot, accuracy, num_correct, num_incorrect, batches
 
 
 # def multilayer_network(x):
@@ -23,20 +24,23 @@ def multilayer_network(x):
 
 x = tf.placeholder(tf.float32, [None, 256])
 y = tf.placeholder(tf.float32, [None, 10])
-pred = multilayer_network(x)
-acc = accuracy(pred, y)
-num_corr = num_correct(pred, y)
-num_incorr =num_incorrect(pred, y)
+predictions = multilayer_network(x)
+acc = accuracy(predictions, y)
+num_corr = num_correct(predictions, y)
+num_incorr =num_incorrect(predictions, y)
 
 loss = tf.reduce_mean(
-    tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-loss = tf.Print(loss, data=[loss, acc, num_corr, num_incorr], message='loss, acc, cor, inc, = ', first_n=100)
+    tf.nn.softmax_cross_entropy_with_logits(logits=predictions, labels=y))
+loss = tf.Print(loss,
+                data=[loss, acc, num_corr, num_incorr],
+                message='loss, acc, cor, inc, = ',
+                first_n=100)
 train_op = tf.train.AdamOptimizer(learning_rate=0.0000001).minimize(loss)
 
 
-def get_batch(data_, batch_size_, step_):
-    offset = (step_ * batch_size_) % (data_.shape[0] - batch_size_)
-    return data_[offset:(offset + batch_size_), :]
+def get_batch(data, batch_size, step):
+    offset = (step * batch_size) % (data.shape[0] - batch_size)
+    return data[offset:(offset + batch_size)]
 
 
 def fit(X, Y, batch_size, epochs, session=tf.Session(), steps_per_report=500):
@@ -68,7 +72,8 @@ def fit(X, Y, batch_size, epochs, session=tf.Session(), steps_per_report=500):
 
 
 def transform(X, batch_size, session=tf.Session()):
-
+    for batch in batches(X, batch_size):
+        _, l, a = session.run([predictions], {X: batch})
 
 
 if __name__ == '__main__':
