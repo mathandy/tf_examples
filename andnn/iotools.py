@@ -18,9 +18,9 @@ def k21hot(Y, k=None):
         k = len(np.unique(Y))
     hot_labels = np.zeros((len(Y), k), dtype=Y.dtype)
     try:
-        hot_labels[np.arange(len(Y)), Y % k] = 1
+        hot_labels[np.arange(len(Y)), (Y % k).ravel()] = 1
     except IndexError:
-        hot_labels[np.arange(len(Y)), Y.astype(int) % k] = 1
+        hot_labels[np.arange(len(Y)), (Y.astype(int) % k).ravel()] = 1
     return hot_labels
 
 

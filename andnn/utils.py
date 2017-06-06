@@ -231,7 +231,7 @@ def step_plot(list_of_lists, ylabels=None):
 
 def accuracy(predictions, labels):
     is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
-    return 100.0 * tf.reduce_mean(tf.cast(is_correct, "float"))
+    return tf.reduce_mean(tf.cast(is_correct, "float"))
 
 
 def num_correct(predictions, labels):
