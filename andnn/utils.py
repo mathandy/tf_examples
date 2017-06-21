@@ -1,33 +1,45 @@
 from __future__ import absolute_import, division, print_function
 import tensorflow as tf
-import os
-from PIL import Image, ImageDraw
-from simshow import simshow
 import numpy as np
-import scipy
-from time import time
-import webbrowser
-import sys
-import cv2
-from time import time as current_time
 from sys import stdout
+import os
+from time import time as current_time
+import cv2
+from PIL import Image, ImageDraw
+from simshow import simshow  # install with pip install simple-imshow
+
+
+def pnumber(x, n=5, pad=' '):
+    """Takes in a float, outputs a string of length n."""
+    s = str(x)
+    try:
+        return s[:n]
+    except IndexError:
+        return pad*(n - len(s)) + s
+
+
+def ppercent(x, n=5, pad=' '):
+    """Takes in a float, outputs a string (percentage) of length n."""
+    return pnumber(x, n=n - 1, pad=pad) + '%'
 
 
 class Timer:
     """A simple tool for timing code while keeping it pretty."""
 
-    def __init__(self, mes='', pretty_time=True):
+    def __init__(self, mes='', pretty_time=True, n=4, pad=' '):
         self.mes = mes  # append after `mes` + '...'
         self.pretty_time = pretty_time
+        self.n = n
+        self.pad = pad
 
     @staticmethod
-    def format_time(et):
+    def format_time(et, n=4, pad=' '):
         if et < 60:
-            return '{:.1f} sec'.format(et)
+            return '{} sec'.format(pnumber(et, n, pad))
         elif et < 3600:
-            return '{:.1f} min'.format(et / 60)
+            return '{} min'.format(pnumber(et / 60, n, pad))
         else:
-            return '{:.1f} hrs'.format(et / 3600)
+            return '{} hrs'.format(pnumber(et / 3600, n, pad))
 
     def __enter__(self):
         stdout.write(self.mes + '...')
@@ -37,9 +49,11 @@ class Timer:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.t1 = current_time()
         if self.pretty_time:
-            print("done (in {})".format(self.format_time(self.t1 - self.t0)))
+            print("done (in {})".format(self.format_time(self.t1 - self.t0,
+                                                         self.n, self.pad)))
         else:
-            print("done (in {} seconds).".format(self.t1 - self.t0))
+            print("done (in {} seconds).".format(self.t1 - self.t0,
+                                                 self.n, self.pad))
         stdout.flush()
 
 
@@ -230,7 +244,7 @@ def step_plot(list_of_lists, ylabels=None):
 
 
 def accuracy(predictions, labels):
-    is_correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+    is_correct = tf.equal(tf.argmax(predictions, axis=1), tf.argmax(labels, axis=1))
     return tf.reduce_mean(tf.cast(is_correct, "float"))
 
 
@@ -254,3 +268,12 @@ def batches(data, batch_size, include_remainder=True):
         num_batches += 1
     return (data[k * batch_size: min((k + 1) * batch_size, len(data))]
             for k in range(num_batches))
+
+
+def color_image(image, num_classes=20):
+    # taken from fcn.utils
+    import matplotlib as mpl
+    import matplotlib.cm
+    norm = mpl.colors.Normalize(vmin=0., vmax=num_classes)
+    mycm = mpl.cm.get_cmap('Set1')
+    return mycm(norm(image))

@@ -7,6 +7,7 @@ from scipy.io import loadmat
 from andnn import AnDNNClassifier
 from andnn.iotools import k21hot, shuffle_together, split_data
 from andnn.layers import fc_layer, conv_layer
+from andnn.losses import ce_wlogits
 from andnn.utils import step_plot, accuracy, num_correct, num_incorrect, batches
 
 
@@ -105,12 +106,16 @@ if __name__ == '__main__':
     # (X, Y), permutation = shuffle_together((X, Y))
 
     classifier = AnDNNClassifier(vgg16,
-                            final_activation=tf.nn.softmax,
-                            example_shape=X.shape[1:],
-                            label_shape=Y.shape[1:],
-                            learning_rate=1e-7,
-                            debug=False)
-    classifier.fit(X, Y, batch_size=50, epochs=50, steps_per_report=500,
+                                 final_activation=tf.nn.softmax,
+                                 example_shape=X.shape[1:],
+                                 label_shape=Y.shape[1:],
+                                 debug=False)
+    classifier.fit(X, Y, batch_size=500, epochs=20,
+                   loss=ce_wlogits,
+                   loss_kwargs={},
+                   optimizer=tf.train.AdamOptimizer,
+                   optimizer_kwargs={'learning_rate': 1e-5},
+                   steps_per_report=500,
                    X_valid=Xvalid, Y_valid=Yvalid)
 
     # if debug:

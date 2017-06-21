@@ -24,6 +24,16 @@ def multilayer_network(x):
     fc3pre = fully_connected(fc2, 10, activation_fn=None, scope='fc3pre')
     return fc3pre
 
+
+def multilayer_network_with_dropout(x):
+    keep_prob = 0.5
+    fc1 = fully_connected(x, 256, activation_fn=tf.nn.relu, scope='fc1')
+    fc1d = tf.nn.dropout(fc1, keep_prob, scope='fc1-dropout')
+    fc2 = fully_connected(fc1d, 256, activation_fn=tf.nn.relu, scope='fc1')
+    fc2d = tf.nn.dropout(fc2, keep_prob, scope='fc2-dropout')
+    fc3pre = fully_connected(fc2d, 10, activation_fn=None, scope='fc3pre')
+    return fc3pre
+
     
 if __name__ == '__main__':
     usps_data = loadmat('usps/USPS.mat')
@@ -32,8 +42,8 @@ if __name__ == '__main__':
     Y = k21hot(Y)
     # Y = Y.sum(axis=1).reshape(-1, 1)
 
-    Xtrain, Ytrain, Xvalid, Yvalid, _, _ = \
-        split_data(X, Y, validpart=.2, testpart=0)
+    Xtrain, Ytrain, Xvalid, Yvalid, Xtest, Ytest = \
+        split_data(X, Y, validpart=.2, testpart=.2)
     # (X, Y), permutation = shuffle_together((X, Y))
 
     classifier = AnDNNClassifier(multilayer_network,
@@ -46,8 +56,9 @@ if __name__ == '__main__':
                    loss_kwargs=None,
                    optimizer=tf.train.AdamOptimizer,
                    optimizer_kwargs={'learning_rate': 1e-7},
-                   steps_per_report=5000,
+                   steps_per_report=len(Xtrain),  # report every epoch
                    X_valid=Xvalid, Y_valid=Yvalid)
+
 
     # if debug:
     #     print([v.name for v in tf.trainable_variables()])

@@ -14,14 +14,37 @@ from andnn.utils import Timer
 
 
 def k21hot(Y, k=None):
+    """Convert integer labels to 1-hot labels."""
     if k is None:
-        k = len(np.unique(Y))
-    hot_labels = np.zeros((len(Y), k), dtype=Y.dtype)
-    try:
-        hot_labels[np.arange(len(Y)), (Y % k).ravel()] = 1
-    except IndexError:
-        hot_labels[np.arange(len(Y)), (Y.astype(int) % k).ravel()] = 1
-    return hot_labels
+        k = len(np.unique(Y.ravel()))  # number of classes
+    Yflat = Y.ravel()
+    hot_labels = np.zeros(Yflat.shape + (k,), dtype=Y.dtype)
+
+    # if len(Y.shape) == 1:
+    #     hot_labels[np.arange(Y.shape[0]), Y.astype(int) % k] = 1
+    # elif len(Y.shape) == 3:  # assume pixel-wise labels
+    #     # i0, i1, i2 = np.indices(hot_labels)
+    #     # hot_labels[i0, i1, i2, Y.astype(int) % k] = 1
+    #     # from itertools import product as cartesian_product
+    #     # for k, i, j in cartesian_product([range(s) for s in Y.shape]):
+    #     #     hot_labels[k, i, j, (Y.astype(int) % k)[k, i, j]] = 1
+    #     Y_shape = Y.shape
+    #     hot_labels[np.arange(Yflat.shape[0]), Yflat.astype(int) % k] = 1
+    # else:
+    #     assert len(Y.shape) in [1, 3]
+    hot_labels[np.arange(Yflat.shape[0]), Yflat.astype(int) % k] = 1
+    return hot_labels.reshape(Y.shape + (k,))
+
+
+def k2pixelwise(Y, im_shape, k=None, onehot=False):
+    """Convert integer labels to pixel-wise labels."""
+    if k is None:
+        k = len(np.unique(Y))  # number of classes
+    pw = np.tensordot((Y % k).ravel(), np.ones(im_shape), axes=0)
+    if onehot:
+        return k21hot(pw, k)
+    else:
+        return pw
 
 
 def shuffle_together(list_of_arrays, permutation=None):

@@ -1,19 +1,14 @@
 Last time:
 ----------
--implemented validation (not tested yet)
--restructured as class, AnDNN
--implemented vgg (to same extent as fully_connected)
-
+-remade k21hot and made k2pixelwise
+-got fcn training working!
 
 todo:
 -----
--test fully connected validation
--test vgg
--implement checkpointing (this is maybe working in andnn_old.py)
--implement loading of weights from npy file
--implement fcn8/YOLO/others :)
--asynchronous batching
-
+-set up (no-training) test to test if tabby_cat.jpg output is as expected
+-check if vgg weights are being written over by initialization
+-figure out how textsegnet gets bounding boxes
+-implement YOLO/others :)
 
 Questions/notes:
 ----------------
