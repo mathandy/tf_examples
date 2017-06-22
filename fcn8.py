@@ -532,7 +532,7 @@ if __name__ == '__main__':
     test_image = scp.misc.imread("tabby_cat.png")
     num_classes = 20  # really?
 
-    vgg_weights = '/home/andy/Desktop/KittiSeg/data/vgg16.npy'
+    vgg_weights = 'models/vgg16.npy'
     if not os.path.exists(vgg_weights):
         vgg_weights = os.path.expanduser('~/Desktop/vgg16.npy')
 

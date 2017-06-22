@@ -1,12 +1,18 @@
 Last time:
 ----------
--remade k21hot and made k2pixelwise
--got fcn training working!
+
+-fcn both training and now (tabby_cat) test work!
+-started rewriting fcn (to make sure I understand)
+
 
 todo:
 -----
--set up (no-training) test to test if tabby_cat.jpg output is as expected
--check if vgg weights are being written over by initialization
+-finish rewriting fcn8
+--figure out what which variables are "with decay" and make them that way (see p.5 of fcn paper)
+--use momentum 0.9 (see p.5)
+--was averaging the 1000 classes into desired number something the fcn paper talked about?
+--implement weight reshaping/loading/saving
+
 -figure out how textsegnet gets bounding boxes
 -implement YOLO/others :)
 

@@ -6,7 +6,7 @@ import numpy as np
 from scipy.io import loadmat
 from andnn import AnDNNClassifier
 from andnn.iotools import k21hot, shuffle_together, split_data
-from andnn.layers import fc_layer, conv_layer
+from andnn.layers import fc_layer, sqconv
 from andnn.losses import ce_wlogits
 from andnn.utils import step_plot, accuracy, num_correct, num_incorrect, batches
 
@@ -35,35 +35,35 @@ def vgg16(X, num_classes=10):
     c_images = X
 
     # images --> conv1_1 --> conv1_2 --> pool1
-    conv1_1, weights1, biases1 = conv_layer(c_images, 3, 3, 64, 'conv1_1')
-    conv1_2, weights2, biases2 = conv_layer(conv1_1, 3, 64, 64, 'conv1_2')
+    conv1_1, weights1, biases1 = sqconv(c_images, 3, 3, 64, 'conv1_1')
+    conv1_2, weights2, biases2 = sqconv(conv1_1, 3, 64, 64, 'conv1_2')
     pool1 = tf.nn.max_pool(conv1_2, _ksize, _strides, 'SAME', name='pool1')
     # parameters += [weights1, biases1, weights2, biases2]
 
     # pool1 --> conv2_1 --> conv2_2 --> pool2
-    conv2_1, weights1, biases1 = conv_layer(pool1, 3, 64, 128, 'conv2_1')
-    conv2_2, weights2, biases2 = conv_layer(conv2_1, 3, 128, 128, 'conv2_2')
+    conv2_1, weights1, biases1 = sqconv(pool1, 3, 64, 128, 'conv2_1')
+    conv2_2, weights2, biases2 = sqconv(conv2_1, 3, 128, 128, 'conv2_2')
     pool2 = tf.nn.max_pool(conv2_2, _ksize, _strides, 'SAME', name='pool2')
     # parameters += [weights1, biases1, weights2, biases2]
 
     # pool2 --> conv3_1 --> conv3_2 --> conv3_3 --> pool3
-    conv3_1, weights1, biases1 = conv_layer(pool2, 3, 128, 256, 'conv3_1')
-    conv3_2, weights2, biases2 = conv_layer(conv3_1, 3, 256, 256, 'conv3_2')
-    conv3_3, weights3, biases3 = conv_layer(conv3_2, 3, 256, 256, 'conv3_3')
+    conv3_1, weights1, biases1 = sqconv(pool2, 3, 128, 256, 'conv3_1')
+    conv3_2, weights2, biases2 = sqconv(conv3_1, 3, 256, 256, 'conv3_2')
+    conv3_3, weights3, biases3 = sqconv(conv3_2, 3, 256, 256, 'conv3_3')
     pool3 = tf.nn.max_pool(conv3_3, _ksize, _strides, 'SAME', name='pool3')
     # parameters += [weights1, biases1, weights2, biases2, weights3, biases3]
 
     # pool3 --> conv4_1 --> conv4_2 --> conv4_3 --> pool4
-    conv4_1, weights1, biases1 = conv_layer(pool3, 3, 256, 512, 'conv4_1')
-    conv4_2, weights2, biases2 = conv_layer(conv4_1, 3, 512, 512, 'conv4_2')
-    conv4_3, weights3, biases3 = conv_layer(conv4_2, 3, 512, 512, 'conv4_3')
+    conv4_1, weights1, biases1 = sqconv(pool3, 3, 256, 512, 'conv4_1')
+    conv4_2, weights2, biases2 = sqconv(conv4_1, 3, 512, 512, 'conv4_2')
+    conv4_3, weights3, biases3 = sqconv(conv4_2, 3, 512, 512, 'conv4_3')
     pool4 = tf.nn.max_pool(conv4_3, _ksize, _strides, 'SAME', name='pool4')
     # parameters += [weights1, biases1, weights2, biases2, weights3, biases3]
 
     # pool4 --> conv5_1 --> conv5_2 --> conv5_3 --> pool5
-    conv5_1, weights1, biases1 = conv_layer(pool4, 3, 512, 512, 'conv5_1')
-    conv5_2, weights2, biases2 = conv_layer(conv5_1, 3, 512, 512, 'conv5_2')
-    conv5_3, weights3, biases3 = conv_layer(conv5_2, 3, 512, 512, 'conv5_3')
+    conv5_1, weights1, biases1 = sqconv(pool4, 3, 512, 512, 'conv5_1')
+    conv5_2, weights2, biases2 = sqconv(conv5_1, 3, 512, 512, 'conv5_2')
+    conv5_3, weights3, biases3 = sqconv(conv5_2, 3, 512, 512, 'conv5_3')
     pool5 = tf.nn.max_pool(conv5_3, _ksize, _strides, 'SAME', name='pool5')
     # parameters += [weights1, biases1, weights2, biases2, weights3, biases3]
 
