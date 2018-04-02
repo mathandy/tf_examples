@@ -8,6 +8,9 @@ import cv2
 from PIL import Image, ImageDraw
 from simshow import simshow  # install with pip install simple-imshow
 
+def softmax(z):
+    ez = np.exp(z - z.max())  # prevents blow-up, suggested in cs231n
+    return ez/ez.sum()
 
 def pnumber(x, n=5, pad=' '):
     """Takes in a float, outputs a string of length n."""

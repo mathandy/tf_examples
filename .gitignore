@@ -2,4 +2,6 @@
 .*
 models/*
 !models/_placeholder.txt
+PROGRESS*
 !.gitignore
+
