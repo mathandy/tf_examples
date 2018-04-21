@@ -1,6 +1,4 @@
-"""  Unfinished... (in progess)
-
-This is a simple case demonstrating the idea that after training a 
+"""This is a simple case demonstrating the idea that after training a 
 model, $y=f_{\theta^*}(x)$, i.e. finding,
  $\theta^* = \min_\theta\{y=f_\theta(x)\}$, 
  it's possible to invert the model at a point (non-uniquely) by finding, 
