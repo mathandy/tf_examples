@@ -24,7 +24,7 @@ from polynomial_regression import poly_fit, gen_fake_data_poly
 NUM_SAMPLES = 2**13  # number of fake training examples
 DEGREE = 3  # degree of polynomial 
 LEARNING_RATE = 0.01
-STEPS = 20
+STEPS = 100
 
 
 def inverse_poly_fit(coeffs, y_, steps, learning_rate):
@@ -40,7 +40,7 @@ def inverse_poly_fit(coeffs, y_, steps, learning_rate):
     X = [tf.ones(tf.shape(x)), x] + [x**k for k in range(2, len(coeffs+1))]
     X = tf.stack(X, axis=1)
     y_hat = tf.squeeze(tf.matmul(X, c))
-    loss = tf.reduce_sum((y - y_hat)**2)/len(y)
+    loss = tf.reduce_sum((y - y_hat)**2)/np.prod(np.shape(y_))
 
     # "Train"
     update_step = tf.train.GradientDescentOptimizer(
@@ -53,7 +53,7 @@ def inverse_poly_fit(coeffs, y_, steps, learning_rate):
             loss_, _ = sess.run(fetches=[loss, update_step])        
             print("step: %s | loss = %s" % (step, loss_))
 
-        return sess.run(x), loss_ 
+        return sess.run(x)
 
 
 if __name__=='__main__':
@@ -66,8 +66,9 @@ if __name__=='__main__':
     #                   deg=DEGREE)
 
     # use gradient descent to find the x
-    y_ = np.linspace(-5, 5, 20)
-    x_ = inverse_poly_fit(p.coeffs, y_, STEPS, LEARNING_RATE)    
+    y_ = np.linspace(-5, 5, 20).astype(np.float32)
+    c_ = p.coeffs.astype(np.float32).reshape((-1, 1))
+    x_ = inverse_poly_fit(c_, y_, STEPS, LEARNING_RATE)    
 
     # plot results
     xb, yh = zip(*sorted(zip(x_,y_)))
