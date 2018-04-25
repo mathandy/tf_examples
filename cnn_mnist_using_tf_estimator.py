@@ -43,7 +43,7 @@ def model_fcn(features, labels, mode):
     logits, x = network(features['images'], mode==tf.estimator.ModeKeys.TRAIN)
     y_hat = tf.nn.softmax(logits)
 
-    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
         logits=logits, 
         labels=labels))
 
@@ -77,7 +77,7 @@ training_input_fn = tf.estimator.inputs.numpy_input_fn(
     x={'images': mnist.train.images}, 
     y=mnist.train.labels,
     batch_size=batch_size, 
-    num_epochs=None, 
+    num_epochs=epochs, 
     shuffle=True)
 model.train(training_input_fn, steps=num_steps)
 
