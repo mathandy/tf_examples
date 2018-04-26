@@ -3,5 +3,5 @@
 models/*
 !models/_placeholder.txt
 PROGRESS*
+*.npz
 !.gitignore
-

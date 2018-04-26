@@ -11,7 +11,7 @@ mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
 # dataset parameters
 num_classes = 10
 img_shape = (28,28)
-n_training_samples = 6000
+n_training_samples = 55000
 
 # Training Parameters
 learning_rate = 0.001
@@ -20,22 +20,31 @@ epochs = 10
 num_steps = epochs*n_training_samples//batch_size
 dropout = 0.25
 
+_network_parameters = ['conv1/bias', 'conv1/kernel', 
+                       'conv2/bias', 'conv2/kernel', 
+                       'fc1/bias', 'fc1/kernel', 
+                       'fc2/bias', 'fc2/kernel']
 
-def reparameterized_network(is_training):
+
+def reparameterized_network(is_training, params):
     x = tf.Variable(tf.truncated_normal((10,) + img_shape + (1,)), name='image')
-    conv1 = tf.layers.conv2d(x, 32, 3, activation=tf.nn.relu)
-    pool1 = tf.layers.max_pooling2d(conv1, 2, 2)
-    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu)
-    pool2 = tf.layers.max_pooling2d(conv2, 2, 2)
-    pool2d = tf.layers.dropout(pool2, rate=dropout, training=is_training)
-    fc1 = tf.layers.flatten(pool2d)
-    fc2 = tf.layers.dense(fc1, 128, activation=tf.nn.relu)
-    fc2d = tf.layers.dropout(fc2, rate=dropout, training=is_training)
-    logits = tf.layers.dense(fc2d, num_classes)
+    conv1 = tf.layers.conv2d(x, 32, 3, activation=tf.nn.relu, name='conv1', trainable=False,
+     kernel_initializer=params['conv1/kernel'], bias_initializer=params['conv1/bias'])
+    pool1 = tf.layers.max_pooling2d(conv1, 2, 2, name='pool1')
+    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu, name='conv2', trainable=False,
+     kernel_initializer=params['conv2/kernel'], bias_initializer=params['conv2/bias'])
+    pool2 = tf.layers.max_pooling2d(conv2, 2, 2, name='pool2')
+    pool2d = tf.layers.dropout(pool2, rate=dropout, training=is_training, name='pool2_dropout')
+    pool2df = tf.layers.flatten(pool2d, name='pool2d_flattened')
+    fc1 = tf.layers.dense(pool2df, 128, activation=tf.nn.relu, name='fc1', trainable=False,
+     kernel_initializer=params['fc1/kernel'], bias_initializer=params['fc1/bias'])
+    fc1d = tf.layers.dropout(fc1, rate=dropout, training=is_training, name='fc1_dropout')
+    logits = tf.layers.dense(fc1d, num_classes, name='fc2', trainable=False,
+     kernel_initializer=params['fc2/kernel'], bias_initializer=params['fc2/bias'])
     return logits, x
 
 
-def reparameterized_model_fcn(features, labels, mode):
+def reparameterized_model_fcn(features, labels, mode, params=None):
     logits, x = network(False)  # try true also!!!!!!!!!!!!!!!!!!
     y_hat = tf.nn.softmax(logits)
 
@@ -44,7 +53,7 @@ def reparameterized_model_fcn(features, labels, mode):
         labels=labels))
 
     train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
-        loss, global_step=tf.train.get_global_step(), var_list=[x])
+        loss, global_step=tf.train.get_global_step())
 
     acc = tf.metrics.accuracy(labels=tf.argmax(labels, axis=1), 
                               predictions=tf.argmax(y_hat, axis=1))
@@ -91,25 +100,39 @@ def train_parameters():
     print("Testing Accuracy:", e['accuracy'])
 
     params = {name: model.get_variable_value(name) 
-                for name in model.get_variable_names()}
+                for name in _network_parameters}
     return params
 
-def generate_image(pretrained_params):
+def generate_examples(pretrained_params, labels):
     # build reparameterized model with trained 
     rmodel = tf.estimator.Estimator(reparameterized_model_fcn, 
                                     params=pretrained_params)
 
     bla = tf.estimator.inputs.numpy_input_fn(
-        x=None,
-        y=np.identity(10),
+        x={},
+        y=labels,
         batch_size=10,
         num_epochs=epochs,
+        shuffle=False,
     )
 
     rmodel.train(bla, steps=num_steps)
+    return rmodel.get_variable_value('image')
+
+
+
+if __name__ == '__main__':
+    try:
+        pretrained_parameters = np.load('cnn_mnist_paramets.npz')
+    except FileNotFoundError:
+        pretrained_parameters = train_parameters()
+        np.savez(pretrained_parameters, 'cnn_mnist_paramets')
+
+    for k, v in pretrained_parameters.items():
+        print(k)
+
+    generated = generate_examples(pretrained_parameters, np.identity(10))
 
     from cv2 import imshow
-    imshow(rmodel.get_variable_value('image'))
-
-trained_params = train_parameters()
-generate_image(trained_params)
+    for ex in generated:
+        imshow(ex)
