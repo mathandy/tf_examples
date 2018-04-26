@@ -7,26 +7,26 @@ thanks also to aymericdamien/TensorFlow-Examples
 """
 from __future__ import division, print_function, absolute_import
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
-mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
 
 
-# dataset parameters
+# Dataset Parameters
 num_classes = 10
-img_shape = (28,28)
+img_shape = (28, 28, 1)
 n_training_samples = 55000
 
 # Training Parameters
-learning_rate = 0.001
-batch_size = 128
-epochs = 10
-num_steps = epochs*n_training_samples//batch_size
-dropout = 0.25
+LEARNING_RATE = 0.001
+BATCH_SIZE = 128
+EPOCHS = 10
+DROPOUT = 0.25
+
+# Derived Parameters
+_num_steps = EPOCHS * n_training_samples // BATCH_SIZE
 
 
-def network(x_, is_training):
-    x = tf.reshape(x_, shape=(-1,) + img_shape + (1,))
+def network(x_, is_training, dropout=DROPOUT):
+    x = tf.reshape(x_, shape=(-1,) + img_shape)
     conv1 = tf.layers.conv2d(x, 32, 3, activation=tf.nn.relu, name='conv1')
     pool1 = tf.layers.max_pooling2d(conv1, 2, 2, name='pool1')
     conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu, name='conv2')
@@ -39,15 +39,15 @@ def network(x_, is_training):
     return logits, x
 
 
-def model_fcn(features, labels, mode):
-    logits, x = network(features['images'], mode==tf.estimator.ModeKeys.TRAIN)
+def model_fcn(features, labels, mode, params):
+    logits, x = network(features['images'], mode == tf.estimator.ModeKeys.TRAIN)
     y_hat = tf.nn.softmax(logits)
 
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
         logits=logits, 
         labels=labels))
 
-    train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(
+    train_op = tf.train.AdamOptimizer(learning_rate=params['learning_rate']).minimize(
         loss, global_step=tf.train.get_global_step())
 
     acc = tf.metrics.accuracy(labels=tf.argmax(labels, axis=1), 
@@ -63,29 +63,31 @@ def model_fcn(features, labels, mode):
 
 
 ##########################################################
-# import MNIST data
-from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-print(mnist.train.images.shape)
-print(mnist.train.labels.shape)
+if __name__ == '__main__':
+    # import MNIST data
+    from tensorflow.examples.tutorials.mnist import input_data
+    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
+    print(mnist.train.images.shape)
+    print(mnist.train.labels.shape)
 
-# Build
-model = tf.estimator.Estimator(model_fcn)
+    # Build
+    model = tf.estimator.Estimator(model_fcn,
+                                   params={'learning_rate': LEARNING_RATE})
 
-# Train
-training_input_fn = tf.estimator.inputs.numpy_input_fn(
-    x={'images': mnist.train.images}, 
-    y=mnist.train.labels,
-    batch_size=batch_size, 
-    num_epochs=epochs, 
-    shuffle=True)
-model.train(training_input_fn, steps=num_steps)
+    # Train
+    training_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={'images': mnist.train.images}, 
+        y=mnist.train.labels,
+        batch_size=BATCH_SIZE,
+        num_epochs=EPOCHS,
+        shuffle=True)
+    model.train(training_input_fn, steps=_num_steps)
 
-# Test
-testing_input_fn = tf.estimator.inputs.numpy_input_fn(
-    x={'images': mnist.test.images}, 
-    y=mnist.test.labels,
-    batch_size=batch_size, 
-    shuffle=False)
-e = model.evaluate(testing_input_fn)
-print("Testing Accuracy:", e['accuracy'])
+    # Test
+    testing_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={'images': mnist.test.images}, 
+        y=mnist.test.labels,
+        batch_size=BATCH_SIZE,
+        shuffle=False)
+    e = model.evaluate(testing_input_fn)
+    print("Testing Accuracy:", e['accuracy'])
