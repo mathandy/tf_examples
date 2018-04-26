@@ -32,10 +32,10 @@ def network(x_, is_training):
     conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu)
     pool2 = tf.layers.max_pooling2d(conv2, 2, 2)
     pool2d = tf.layers.dropout(pool2, rate=dropout, training=is_training)
-    fc1 = tf.layers.flatten(pool2d)
-    fc2 = tf.layers.dense(fc1, 128, activation=tf.nn.relu)
-    fc2d = tf.layers.dropout(fc2, rate=dropout, training=is_training)
-    logits = tf.layers.dense(fc2d, num_classes)
+    pool2df = tf.layers.flatten(pool2d)
+    fc1 = tf.layers.dense(pool2df, 128, activation=tf.nn.relu)
+    fc1d = tf.layers.dropout(fc1, rate=dropout, training=is_training)
+    logits = tf.layers.dense(fc1d, num_classes)
     return logits, x
 
 
