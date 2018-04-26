@@ -15,7 +15,7 @@ mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
 # dataset parameters
 num_classes = 10
 img_shape = (28,28)
-n_training_samples = 6000
+n_training_samples = 55000
 
 # Training Parameters
 learning_rate = 0.001
