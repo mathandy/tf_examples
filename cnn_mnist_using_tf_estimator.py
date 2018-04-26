@@ -27,15 +27,15 @@ dropout = 0.25
 
 def network(x_, is_training):
     x = tf.reshape(x_, shape=(-1,) + img_shape + (1,))
-    conv1 = tf.layers.conv2d(x, 32, 3, activation=tf.nn.relu)
-    pool1 = tf.layers.max_pooling2d(conv1, 2, 2)
-    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu)
-    pool2 = tf.layers.max_pooling2d(conv2, 2, 2)
-    pool2d = tf.layers.dropout(pool2, rate=dropout, training=is_training)
-    pool2df = tf.layers.flatten(pool2d)
-    fc1 = tf.layers.dense(pool2df, 128, activation=tf.nn.relu)
-    fc1d = tf.layers.dropout(fc1, rate=dropout, training=is_training)
-    logits = tf.layers.dense(fc1d, num_classes)
+    conv1 = tf.layers.conv2d(x, 32, 3, activation=tf.nn.relu, name='conv1')
+    pool1 = tf.layers.max_pooling2d(conv1, 2, 2, name='pool1')
+    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu, name='conv2')
+    pool2 = tf.layers.max_pooling2d(conv2, 2, 2, name='pool2')
+    pool2d = tf.layers.dropout(pool2, rate=dropout, training=is_training, name='pool2_dropout')
+    pool2df = tf.layers.flatten(pool2d, name='pool2d_flattened')
+    fc1 = tf.layers.dense(pool2df, 128, activation=tf.nn.relu, name='fc1')
+    fc1d = tf.layers.dropout(fc1, rate=dropout, training=is_training, name='fc1_dropout')
+    logits = tf.layers.dense(fc1d, num_classes, name='fc2')
     return logits, x
 
 
