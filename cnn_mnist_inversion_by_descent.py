@@ -4,6 +4,8 @@ Unfinished.
 from __future__ import division, print_function, absolute_import
 import tensorflow as tf
 import numpy as np
+from imageio import imwrite
+import os
 
 # Dataset Parameters
 num_classes = 10
@@ -18,15 +20,55 @@ TRAINING_DROPOUT = 0.25
 # Generator Parameters
 LEARNING_RATE = 0.001
 DROPOUT = 0.25
-USE_DROPOUT = False  # try true also!!!!!!!!!!!!!!!!!!
-max_steps = 1000
+USE_DROPOUT = True  # try true also!!!!!!!!!!!!!!!!!!
+use_loss2 = False
+max_steps = int(1e5)
 step_per_report = 100
+step_per_image_write = 1000
+results_dir = '/home/andy/Desktop/mnist_inversion_results'
 
 
 _network_parameter_names = ['conv1/bias', 'conv1/kernel',
                             'conv2/bias', 'conv2/kernel',
                             'fc1/bias', 'fc1/kernel',
                             'fc2/bias', 'fc2/kernel']
+
+# Pre-Train
+def pretrain_parameters():
+    # import MNIST data
+    from tensorflow.examples.tutorials.mnist import input_data
+    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
+    print(mnist.train.images.shape)
+    print(mnist.train.labels.shape)
+
+    from cnn_mnist_using_tf_estimator import model_fcn
+    model = tf.estimator.Estimator(model_fcn,
+                                   params={'learning_rate': TRAINING_LEARNING_RATE})
+
+    # Train
+    training_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={'images': mnist.train.images},
+        y=mnist.train.labels,
+        batch_size=TRAINING_EPOCHS,
+        num_epochs=TRAINING_BATCH_SIZE,
+        shuffle=True)
+    model.train(training_input_fn, steps=1000)
+
+    # Test
+    testing_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={'images': mnist.test.images},
+        y=mnist.test.labels,
+        batch_size=TRAINING_BATCH_SIZE,
+        shuffle=False)
+    e = model.evaluate(testing_input_fn)
+    print("Testing Accuracy:", e['accuracy'])
+
+    params = {name: model.get_variable_value(name)
+                for name in _network_parameter_names}
+    return params
+
+
+##########################################################
 
 
 def reparameterized_network(is_training, params):
@@ -55,36 +97,21 @@ def reparameterized_network(is_training, params):
     return logits, x
 
 
-# def reparameterized_model_fcn(features, labels, mode, params=None):
-#     logits, x = reparameterized_network(USE_DROPOUT, params)
-#     y_hat = tf.nn.softmax(logits)
-#
-#     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
-#         logits=logits,
-#         labels=labels))
-#
-#     train_op = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(
-#         loss, global_step=tf.train.get_global_step())
-#
-#     acc = tf.metrics.accuracy(labels=tf.argmax(labels, axis=1),
-#                               predictions=tf.argmax(y_hat, axis=1))
-#
-#     estim_specs = tf.estimator.EstimatorSpec(
-#         mode=mode,
-#         predictions=y_hat,
-#         loss=loss,
-#         train_op=train_op,
-#         eval_metric_ops={'accuracy': acc})
-#     return estim_specs
-
-
-def reparameterized_model_fcn(params, labels):
+def reparameterized_model_fcn(params, labels, use_loss2=True):
     logits, x = reparameterized_network(USE_DROPOUT, params)
     y_hat = tf.nn.softmax(logits)
 
-    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
+    loss1 = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
         logits=logits,
         labels=labels))
+
+    factor = tf.constant(1e-2)
+    loss2 = factor*tf.reduce_mean(x)
+
+    if use_loss2:
+        loss = loss1 - loss2
+    else:
+        loss = loss1
 
     train_op = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(
         loss, global_step=tf.train.get_global_step())
@@ -92,67 +119,27 @@ def reparameterized_model_fcn(params, labels):
     acc = tf.metrics.accuracy(labels=tf.argmax(labels, axis=1),
                               predictions=tf.argmax(y_hat, axis=1))
 
-    return acc, loss, train_op, y_hat, x
+    return acc, loss, loss1, loss2, train_op, y_hat, x
+
 
 ##########################################################
 
+def save_images(filename, images):
+    images -= images.min()
+    images /= images.max()
+    images *= 255
+    images = images.astype('uint8')
 
-# Train
-def pretrain_parameters():
-    # import MNIST data
-    from tensorflow.examples.tutorials.mnist import input_data
-    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-    print(mnist.train.images.shape)
-    print(mnist.train.labels.shape)
-
-    from cnn_mnist_using_tf_estimator import model_fcn
-    model = tf.estimator.Estimator(model_fcn,
-                                   params={'learning_rate': TRAINING_LEARNING_RATE})
-
-    # Train
-    training_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={'images': mnist.train.images}, 
-        y=mnist.train.labels,
-        batch_size=TRAINING_EPOCHS,
-        num_epochs=TRAINING_BATCH_SIZE,
-        shuffle=True)
-    model.train(training_input_fn, steps=1000)
-
-    # Test
-    testing_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={'images': mnist.test.images}, 
-        y=mnist.test.labels,
-        batch_size=TRAINING_BATCH_SIZE,
-        shuffle=False)
-    e = model.evaluate(testing_input_fn)
-    print("Testing Accuracy:", e['accuracy'])
-
-    params = {name: model.get_variable_value(name) 
-                for name in _network_parameter_names}
-    return params
+    image_bar = np.concatenate([img for img in images])
+    imwrite(filename, image_bar)
+    return images
 
 
-# def generate_examples(pretrained_params, labels):
-#     # build reparameterized model with pretrained parameters
-#     rmodel = tf.estimator.Estimator(reparameterized_model_fcn,
-#                                     params=pretrained_params)
-#
-#     gen_input_fcn = tf.estimator.inputs.numpy_input_fn(
-#         x={'images', np.zeros((100,100,3))},
-#         y=labels,
-#         batch_size=len(labels),
-#         shuffle=False,
-#     )
-#
-#     rmodel.train(gen_input_fcn, steps=NUM_STEPS)
-#     return rmodel.get_variable_value('gen_images')
-
-
-def generate_examples(pretrained_params, labels):
+def generate_examples(pretrained_params, labels, use_loss2=True):
     with tf.Session() as sess:
 
-        acc, loss, train_op, y_hat, x = \
-            reparameterized_model_fcn(pretrained_params, labels)
+        acc, loss, loss1, loss2, train_op, y_hat, x = \
+            reparameterized_model_fcn(pretrained_params, labels, use_loss2)
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -161,9 +148,12 @@ def generate_examples(pretrained_params, labels):
             _ = sess.run(fetches=[train_op])
 
             if not (step % step_per_report):
-                acc_, loss_ = sess.run(fetches=[acc, loss])
-                print("step: %s | loss = %s | acc = %s" % (step, loss_, acc_))
+                acc_, loss1_, loss2_ = sess.run(fetches=[acc, loss1, loss2])
+                print("step: %s | loss1 = %s | loss2 = %s |acc = %s" % (step, loss1_, loss2_, acc_))
 
+            if not (step % step_per_image_write):
+                save_images(os.path.join(results_dir, 'step_%s.jpg'%step),
+                            sess.run(x))
 
         return sess.run(x)
 
@@ -176,16 +166,6 @@ if __name__ == '__main__':
         np.savez('cnn_mnist_parameters', **pretrained_parameters)
 
     pretrained_parameters = dict(pretrained_parameters)
-    generated = generate_examples(pretrained_parameters,
-                                  np.identity(num_classes))
-
-
-
-
-    # from cv2 import imshow
-    for k, ex in enumerate(generated):
-        # imshow('generated %s' % k, ex)
-        import matplotlib.pyplot as plt
-        import matplotlib.image as mpimg
-        import numpy as np
-        imgplot = plt.imshow(ex)
+    generated_images = generate_examples(pretrained_parameters,
+                                         np.identity(num_classes),
+                                         use_loss2=use_loss2)
