@@ -1,4 +1,4 @@
-""" 
+"""
 Finished... but doesn't work so well.
 """
 from __future__ import division, print_function, absolute_import
@@ -6,6 +6,14 @@ import tensorflow as tf
 import numpy as np
 from imageio import imwrite
 import os
+
+dropout = tf.layers.dropout
+conv2d = tf.layers.conv2d
+max_pooling2d = tf.layers.max_pooling2d
+dense = tf.layers.dense
+flatten = tf.layers.flatten
+relu = tf.nn.relu
+
 
 # Dataset Parameters
 num_classes = 10
@@ -18,13 +26,13 @@ TRAINING_EPOCHS = 10
 TRAINING_DROPOUT = 0.25
 
 # Generator Parameters
-LEARNING_RATE = 0.00001
+LEARNING_RATE = 0.001
 DROPOUT = 0.25
-USE_DROPOUT = False  # try true also!!!!!!!!!!!!!!!!!!
-use_loss2 = True
-max_steps = int(1e6)
-step_per_report = 1000
-step_per_image_write = 10000
+USE_DROPOUT = True  # try true also!!!!!!!!!!!!!!!!!!
+use_loss2 = False
+max_steps = int(1e5)
+step_per_report = 100
+step_per_image_write = 1000
 results_dir = '/home/andy/Desktop/mnist_inversion_results'
 
 
@@ -33,71 +41,51 @@ _network_parameter_names = ['conv1/bias', 'conv1/kernel',
                             'fc1/bias', 'fc1/kernel',
                             'fc2/bias', 'fc2/kernel']
 
-# Pre-Train
-def pretrain_parameters():
-    # import MNIST data
-    from tensorflow.examples.tutorials.mnist import input_data
-    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-    print(mnist.train.images.shape)
-    print(mnist.train.labels.shape)
-
-    from cnn_mnist_using_tf_estimator import model_fcn
-    model = tf.estimator.Estimator(model_fcn,
-                                   params={'learning_rate': TRAINING_LEARNING_RATE})
-
-    # Train
-    training_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={'images': mnist.train.images},
-        y=mnist.train.labels,
-        batch_size=TRAINING_EPOCHS,
-        num_epochs=TRAINING_BATCH_SIZE,
-        shuffle=True)
-    model.train(training_input_fn, steps=1000)
-
-    # Test
-    testing_input_fn = tf.estimator.inputs.numpy_input_fn(
-        x={'images': mnist.test.images},
-        y=mnist.test.labels,
-        batch_size=TRAINING_BATCH_SIZE,
-        shuffle=False)
-    e = model.evaluate(testing_input_fn)
-    print("Testing Accuracy:", e['accuracy'])
-
-    params = {name: model.get_variable_value(name)
-                for name in _network_parameter_names}
-    return params
-
 
 ##########################################################
 
 
-def reparameterized_network(is_training, params):
-    x = tf.Variable(tf.truncated_normal((10,) + img_shape), name='gen_images')
-    conv1 = tf.layers.conv2d(x, 32, 3, activation=tf.nn.relu, name='conv1',
-     trainable=False,
-     kernel_initializer=tf.constant_initializer(params['conv1/kernel']),
-     bias_initializer=tf.constant_initializer(params['conv1/bias']))
-    pool1 = tf.layers.max_pooling2d(conv1, 2, 2, name='pool1')
-    conv2 = tf.layers.conv2d(pool1, 64, 3, activation=tf.nn.relu, name='conv2',
-     trainable=False,
-     kernel_initializer=tf.constant_initializer(params['conv2/kernel']),
-     bias_initializer=tf.constant_initializer(params['conv2/bias']))
-    pool2 = tf.layers.max_pooling2d(conv2, 2, 2, name='pool2')
-    pool2d = tf.layers.dropout(pool2, rate=DROPOUT, training=is_training, name='pool2_dropout')
-    pool2df = tf.layers.flatten(pool2d, name='pool2d_flattened')
-    fc1 = tf.layers.dense(pool2df, 128, activation=tf.nn.relu, name='fc1',
-     trainable=False,
-     kernel_initializer=tf.constant_initializer(params['fc1/kernel']),
-     bias_initializer=tf.constant_initializer(params['fc1/bias']))
-    fc1d = tf.layers.dropout(fc1, rate=DROPOUT, training=is_training, name='fc1_dropout')
-    logits = tf.layers.dense(fc1d, num_classes, name='fc2',
-     trainable=False,
-     kernel_initializer=tf.constant_initializer(params['fc2/kernel']),
-     bias_initializer=tf.constant_initializer(params['fc2/bias']))
+def discriminator(input_tensor, img_shape, num_classes, is_training, droprate=.25):
+    # x = tf.placeholder(tf.float32, shape=(-1,) + img_shape)
+    x = tf.reshape(input_tensor, shape=(-1,) + img_shape)
+
+    net = conv2d(x, 32, 3, activation=relu, name='conv1')
+    net = max_pooling2d(net, 2, 2, name='pool1')
+
+    net = conv2d(net, 64, 3, activation=relu, name='conv2')
+    net = max_pooling2d(net, 2, 2, name='pool2')
+    net = dropout(net, rate=droprate, training=is_training)
+
+    net = flatten(net)
+
+    net = dense(net, 128, activation=relu, name='fc1')
+    net = dropout(net, rate=droprate, training=is_training)
+
+    logits = dense(net, num_classes, name='fc2')
     return logits, x
 
 
-def reparameterized_model_fcn(params, labels, use_loss2=True):
+def discriminator(input_tensor, img_shape, num_classes, is_training, droprate=.25):
+    # x = tf.placeholder(tf.float32, shape=(-1,) + img_shape)
+    x = tf.reshape(input_tensor, shape=(-1,) + img_shape)
+
+    net = conv2d(x, 32, 3, activation=relu, name='conv1')
+    net = max_pooling2d(net, 2, 2, name='pool1')
+
+    net = conv2d(net, 64, 3, activation=relu, name='conv2')
+    net = max_pooling2d(net, 2, 2, name='pool2')
+    net = dropout(net, rate=droprate, training=is_training)
+
+    net = flatten(net)
+
+    net = dense(net, 128, activation=relu, name='fc1')
+    net = dropout(net, rate=droprate, training=is_training)
+
+    logits = dense(net, num_classes, name='fc2')
+    return logits, x
+
+
+def model_fcn(params, labels, use_loss2=True):
     logits, x = reparameterized_network(USE_DROPOUT, params)
     y_hat = tf.nn.softmax(logits)
 
@@ -105,8 +93,7 @@ def reparameterized_model_fcn(params, labels, use_loss2=True):
         logits=logits,
         labels=labels))
 
-    # factor = tf.Variable(tf.constant(1e-2))
-    factor = tf.constant(1e-5)
+    factor = tf.constant(1e-2)
     loss2 = factor*tf.reduce_mean(x)
 
     if use_loss2:
