@@ -13,6 +13,10 @@ from tflearn.data_utils import build_hdf5_image_dataset
 from andnn.utils import Timer
 
 
+exists = os.path.exists
+join = os.path.join
+
+
 def k21hot(Y, k=None):
     """Convert integer labels to 1-hot labels."""
     if k is None:
@@ -80,7 +84,7 @@ def split_data(X, Y, validpart=0, testpart=0, shuffle=False):
     if shuffle:
         (X, Y), permutation = shuffle_together((X, Y))
 
-    if 0 <= validpart < 1 and 0 <= testpart < 1:
+    if 0 < validpart < 1 or 0 < testpart < 1:
         m_valid = int(validpart * m)
         m_test = int(testpart * m)
         m_train = len(Y) - m_valid - m_test
@@ -178,7 +182,7 @@ def incremental_whiten(X):
 def image_preloader(image_directory, size, image_depth=3, label_type=False,
                     pixel_labels_lookup=None, num_classes=None,
                     exts=('.jpg', '.jpeg', '.png'), normalize=True,
-                    shuffle=True, onehot=True, testpart=.0, validpart=.0,
+                    shuffle=True, onehot=True, testpart=0, validpart=0,
                     whiten=False, ignore_existing=False,
                     storage_directory=None,
                     save_split_sets=True):
@@ -190,10 +194,6 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
         - 
         -
 
-    All images are assumed to be in `image_directory`  or, if 
-    `subdirectory_labels` is true then will assume all images are in a 
-    subdirectory (of depth 1) and that subdirectory is a corresponding label.
-
     Args:
         image_directory (string): The root directory containing all images.
         size (array-like): The (width, height) images should be re-sized to.
@@ -203,7 +203,7 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
             filename and shape of an image.
         num_classes (int): Number of label classes.  Required only if 
             `label_type`=="pixel".
-        exts (iterable): The set of acceptable file extensions to include.
+        exts (iterable): The set of acceptable file extensions
         normalize: 
         shuffle: 
         onehot: 
@@ -218,10 +218,15 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
     Returns:
         (X_train, Y_train, X_valid, Y_valid, X_test, Y_test, class_names)
     """
+    exts = [ext.lower() for ext in exts]
 
-    exists = os.path.exists
-    join = os.path.join
-
+    if storage_directory is None:
+        from warnings import warn
+        warn("no storage_directory provided -- unable to save/load.")
+    elif not os.path.exists(storage_directory):
+        raise IOError("storage_directory='{}' does not exist."
+                      "".format(storage_directory))
+    
     _label_types = ['subdirectory', 'pixel', None]
     # some parameter-checking
     if label_type == 'subdirectory':
@@ -252,7 +257,7 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
         shape_of_pixel_labels = (size[0], size[1], num_classes)
 
     def is_image(image_file_name):
-        return os.path.splitext(image_file_name)[1] in exts
+        return os.path.splitext(image_file_name)[1].lower() in exts
 
     if label_type == "subdirectory":
         class_names = [d for d in os.listdir('./' + image_directory)
@@ -260,12 +265,13 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
     else:
         class_names = None
 
-    if storage_directory:
+    if storage_directory is not None:
         Yfile = join(storage_directory, 'Ydata' + s)
         Xfile = join(storage_directory, 'Xdata' + s)
         Xfile_white = join(storage_directory, 'Xdata-whitened-' + s)
 
-    if storage_directory and not ignore_existing:
+    _no_npy_found=False
+    if not (storage_directory is None or ignore_existing):
 
         if exists(Yfile) and \
               (exists(Xfile) or (whiten and exists(Xfile_white))):
@@ -289,9 +295,12 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
                     X = np.load(Xfile)
         else:
             mes = 'No numpy file found.'
+            _no_npy_found=True
     else:
         mes = ''
-
+        _no_npy_found=True
+        
+    if _no_npy_found:
         with Timer(mes + 'Loading data from image directories'):
 
             with Timer('Collecting image file names'):
@@ -299,7 +308,7 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
                     image_files = []
                     Y = []
                     for k, d in enumerate(class_names):
-                        with Timer(d, begin='\t'):
+                        with Timer(d):
                             fd = join(image_directory, d)
                             image_files_d = [join(fd, fn)
                                              for fn in os.listdir(fd)
@@ -360,7 +369,7 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
             with Timer('Converting to 1-hot labels'):
                 Y = k21hot(Y)
 
-        if storage_directory:
+        if storage_directory is not None:
             with Timer('Saving data (before any normalizing, whitening, and/or '
                        'splitting)'):
                 np.save(Xfile, X)
@@ -370,7 +379,7 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
             with Timer('Whitening'):
                 X = incremental_whiten(X)
 
-            if storage_directory:
+            if storage_directory is not None:
                 with Timer('Saving whitening data'):
                     np.save(Xfile_white, X)
 
@@ -380,12 +389,13 @@ def image_preloader(image_directory, size, image_depth=3, label_type=False,
             X -= np.mean(X, axis=0)
             X /= np.std(X, axis=0)
 
-    if (testpart or validpart) and storage_directory:
+    if (testpart or validpart):
         with Timer('Splitting data into fit/validate/test sets'):
             X_train, Y_train, X_valid, Y_valid, X_test, Y_test = \
                 split_data(X, Y, validpart, testpart, shuffle=False)
 
         if save_split_sets:
+
             with Timer('Saving split datasets'):
                 np.save(join(storage_directory, 'Xtrain' + s), X_train)
                 np.save(join(storage_directory, 'Ytrain' + s), Y_train)

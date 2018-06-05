@@ -7,6 +7,47 @@ from time import time as current_time
 import cv2
 from PIL import Image, ImageDraw
 from simshow import simshow  # install with pip install simple-imshow
+from imageio import imread, imwrite
+from skimage.transform import resize 
+from skimage.viewer import ImageViewer
+
+
+def show_image_sample(image_directory, grid_shape, extensions=['jpg'],
+                      show=True, output_filename=None, thumbnail_size=100,
+                      assert_enough_images=True):
+    """Creates image of a grid of images sampled from `image_directory`."""
+
+    if isinstance(thumbnail_size, int):
+        size = (thumbnail_size, thumbnail_size)
+    else:
+        size = thumbnail_size
+
+    def is_image(filename):
+        return any(filename.lower().endswith(x.lower()) for x in extensions) 
+    
+    image_files = [os.path.join(image_directory, fn) 
+                    for fn in os.listdir(image_directory) 
+                        if is_image(fn)]
+
+    assert len(grid_shape) == 2
+    if assert_enough_images:
+        assert grid_shape[0]*grid_shape[1] <= len(image_files)
+
+    sample = np.random.choice(image_files, grid_shape)
+
+    grid = []
+    for i in range(grid_shape[0]):
+        row = []
+        for j in range(grid_shape[1]):
+            row.append(resize(imread(sample[i,j]), size))
+        grid.append(np.concatenate(row, axis=1))
+    grid = (255*np.concatenate(grid)).astype('uint8')
+
+    if show:
+        ImageViewer(grid).show()
+
+    if output_filename is not None:
+        imwrite(output_filename, grid)
 
 def softmax(z):
     ez = np.exp(z - z.max())  # prevents blow-up, suggested in cs231n
@@ -280,4 +321,3 @@ def color_image(image, num_classes=20):
     norm = mpl.colors.Normalize(vmin=0., vmax=num_classes)
     mycm = mpl.cm.get_cmap('Set1')
     return mycm(norm(image))
-    
